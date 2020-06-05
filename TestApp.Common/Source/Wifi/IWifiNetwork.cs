@@ -8,10 +8,8 @@ namespace TestApp.Common.Source.Wifi
     {
         string Ssid { get; set; }
 
-        bool HiddenSSID { get; set; }
+        string Bssid { get; set; }
 
-        int NetworkId { get; set; }
-
-        string ProvideFriendlyName { get; set; }
+        int Level { get; set; }
     }
 }

@@ -1,75 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Collections.ObjectModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Android;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.Net.Wifi;
-using Android.OS;
-using Android.Runtime;
 using Android.Support.V4.Content;
-using Android.Views;
-using Android.Widget;
 using TestApp.Common.Source.Wifi;
 
 namespace TestApp.Droid.Source.Adapter.Wifi
 {
     class TestAppWifiService : ITestAppWifiService
     {
-        List<IWifiNetwork> _wifiNetworks;
+        private static WifiManager _wifiManager;
+
+        public ObservableCollection<IWifiNetwork> WifiNetworks { get; set; }
+
+        private CancellationTokenSource _continuousScanNetworksCancellationTokenSource;
 
         public TestAppWifiService()
         {
-            System.Diagnostics.Debug.WriteLine("TEST APP WIFI SERVICE");
-            GetNetworks();
+            WifiNetworks = new ObservableCollection<IWifiNetwork>();
         }
 
-        private void GetNetworks()
+        public void ScanWifiNetworksContinuously()
         {
-            if (CanAccessWifi() && CanChangeWifi())
-            {
-                System.Diagnostics.Debug.WriteLine("ENABLED");
-                // We have permission, go ahead and use the camera.
-                WifiManager wifiManager = (WifiManager)Application.Context.GetSystemService(Context.WifiService);
-                if (!wifiManager.IsWifiEnabled)
-                {
-                    wifiManager.SetWifiEnabled(true);
-                }
-                else
-                {
-                    // wifiManager.SetWifiEnabled(false);
-                }
+            _continuousScanNetworksCancellationTokenSource = new CancellationTokenSource();
 
-                var networks = new List<IWifiNetwork>();
-
-                foreach (var n in wifiManager.ConfiguredNetworks)
-                {
-                    var network = new WifiNetwork()
-                    {
-                        Ssid = n.Ssid,
-                        HiddenSSID = n.HiddenSSID,
-                        NetworkId = n.NetworkId,
-                        ProvideFriendlyName = n.ProviderFriendlyName
-                    }
-                    System.Diagnostics.Debug.WriteLine($"=== WifiNetwork : {n.Ssid} ===");
-                    System.Diagnostics.Debug.WriteLine($"=== WifiNetwork : {n.HiddenSSID} ===");
-                    System.Diagnostics.Debug.WriteLine($"=== WifiNetwork : {n.NetworkId} ===");
-                    System.Diagnostics.Debug.WriteLine($"=== WifiNetwork : {n.ProviderFriendlyName} ===");
-                }
-            }
-            else
+            Task.Run(async () =>
             {
-                // Wifi permission is not granted. If necessary display rationale & request.
-                System.Diagnostics.Debug.WriteLine("NOT GRANTED");
-            }
+                while (true)
+                {
+                    System.Diagnostics.Debug.WriteLine("Searching...");
+                    WifiNetworks.Clear();
+                    _continuousScanNetworksCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    var ctx = Application.Context;
+                    var wifiMonitor = new WifiMonitor();
+                    wifiMonitor.OnNetworkDetected += WifiMonitor_OnNetworkDetected;
+                    ctx.RegisterReceiver(wifiMonitor, new IntentFilter(WifiManager.ScanResultsAvailableAction));
+                    _wifiManager = ((WifiManager)Application.Context.GetSystemService(Context.WifiService));
+                    _wifiManager.StartScan();
+
+                    await Task.Delay(5000);
+                }
+            });
         }
 
-        public Task<List<IWifiNetwork>> GetWifiNetworks()
+        public void StopScanning()
         {
-            return null;
+            try
+            {
+                _continuousScanNetworksCancellationTokenSource.Cancel();
+            }
+            catch (OperationCanceledException)
+            {
+                //
+            }
         }
 
         private bool CanAccessWifi()
@@ -80,6 +69,42 @@ namespace TestApp.Droid.Source.Adapter.Wifi
         private bool CanChangeWifi()
         {
             return ContextCompat.CheckSelfPermission(Application.Context, Manifest.Permission.ChangeWifiState) == (int)Permission.Granted;
+        }
+
+        private void WifiMonitor_OnNetworkDetected(object sender, OnNetworkDetectedEventArgs e)
+        {
+            WifiNetworks.Add(e.WifiNetwork);
+        }
+
+        public class WifiMonitor : BroadcastReceiver
+        {
+            public event EventHandler<OnNetworkDetectedEventArgs> OnNetworkDetected;
+
+            public override void OnReceive(Context context, Intent intent)
+            {
+                IList<ScanResult> scanwifinetworks = _wifiManager.ScanResults;
+                foreach (ScanResult n in scanwifinetworks)
+                {
+                    // System.Diagnostics.Debug.WriteLine($"Detected network: {n.Ssid} - {n.Bssid}");
+                    var network = new WifiNetwork()
+                    {
+                        Ssid = n.Ssid,
+                        Bssid = n.Bssid,
+                        Level = n.Level
+                    };
+
+                    var args = new OnNetworkDetectedEventArgs()
+                    {
+                        WifiNetwork = network
+                    };
+                    OnNetworkDetected.Invoke(this, args);
+                }
+            }
+        }
+
+        public class OnNetworkDetectedEventArgs : EventArgs
+        {
+            public IWifiNetwork WifiNetwork { get; set; }
         }
     }
 }
