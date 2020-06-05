@@ -1,2 +1,2 @@
 # xamarin-wifi-manager
-Xamarin Wifi Manager
+This project is a Xamarin Android Wifi Manager. It scans for wifi networks nearby.
