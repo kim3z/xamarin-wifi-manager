@@ -1,25 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Android.App;
-using Android.Content;
-using Android.Net.Wifi;
 using Android.OS;
-using Android.Runtime;
-using Android.Views;
 using Android.Widget;
 using GalaSoft.MvvmLight.Helpers;
 using TestApp.Common.Source.View.Models;
-using TestApp.Droid.Source.Adapter.Wifi;
 using TestApp.Droid.Source.Utilities;
 using TestApp.Droid.Source.Views.Adapters;
 
 namespace TestApp.Droid.Source.Views.Activities
 {
     [Activity(Label = "ConnectToWifiActivity")]
-    public class ConnectToWifiActivity : Activity
+    public class ConnectToWifiActivity : MainActivity
     {
         private ConnectToWifiViewModel _viewModel;
 
@@ -36,6 +27,9 @@ namespace TestApp.Droid.Source.Views.Activities
             base.OnCreate(savedInstanceState);
 
             SetContentView(Resource.Layout.activity_connect_to_wifi);
+
+            SetActionBarTitle("Wifi Settings");
+
             _adapter = new WifiNetworkAdapter(this, ViewModel.WifiNetworks);
             InitElements();
             InitBindings();

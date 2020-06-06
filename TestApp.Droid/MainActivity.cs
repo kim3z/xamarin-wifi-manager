@@ -39,6 +39,11 @@ namespace TestApp.Droid
             _connectToWifiBtn.Click += WifiBtn_Clicked;
         }
 
+        public void SetActionBarTitle(string title)
+        {
+            SupportActionBar.Title = title;
+        }
+
         private void WifiBtn_Clicked(object sender, System.EventArgs e)
         {
             ViewModel.ConnectToWifiClickedCommand.Execute(null);
