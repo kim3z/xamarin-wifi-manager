@@ -21,9 +21,16 @@ namespace TestApp.Droid.Source.Adapter.Wifi
 
         private CancellationTokenSource _continuousScanNetworksCancellationTokenSource;
 
+        private const int MilliSecondsBetweenScans = 8000;
+
         public TestAppWifiService()
         {
             WifiNetworks = new ObservableCollection<IWifiNetwork>();
+
+            var wifiMonitor = new WifiMonitor();
+            wifiMonitor.OnNetworkDetected += WifiMonitor_OnNetworkDetected;
+            Application.Context.RegisterReceiver(wifiMonitor, new IntentFilter(WifiManager.ScanResultsAvailableAction));
+            _wifiManager = ((WifiManager)Application.Context.GetSystemService(Context.WifiService));
         }
 
         public void ScanWifiNetworksContinuously()
@@ -35,16 +42,14 @@ namespace TestApp.Droid.Source.Adapter.Wifi
                 while (true)
                 {
                     System.Diagnostics.Debug.WriteLine("Searching...");
+                    
                     WifiNetworks.Clear();
+                    
                     _continuousScanNetworksCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    var ctx = Application.Context;
-                    var wifiMonitor = new WifiMonitor();
-                    wifiMonitor.OnNetworkDetected += WifiMonitor_OnNetworkDetected;
-                    ctx.RegisterReceiver(wifiMonitor, new IntentFilter(WifiManager.ScanResultsAvailableAction));
-                    _wifiManager = ((WifiManager)Application.Context.GetSystemService(Context.WifiService));
+                    
                     _wifiManager.StartScan();
 
-                    await Task.Delay(5000);
+                    await Task.Delay(MilliSecondsBetweenScans);
                 }
             });
         }

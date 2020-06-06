@@ -25,7 +25,7 @@ namespace TestApp.Common.Source.View.Models
             {
                 return;
             }
-
+            var shouldUpdate = false;
             foreach (var wifiNetwork in newWifiItems)
             {
                 if (!(wifiNetwork is IWifiNetwork network))
@@ -37,10 +37,32 @@ namespace TestApp.Common.Source.View.Models
                 if (notInWifiList)
                 {
                     WifiNetworks.Add(network);
-                    WifiNetworks.OrderBy(x => x.Level);
-                    RaisePropertyChanged(() => WifiNetworks);
+                    shouldUpdate = true;
+                } else
+                {
+                    // update network info
+                    foreach (var existingNetwork in WifiNetworks)
+                    {
+                        if (existingNetwork.Bssid == network.Bssid && existingNetwork.Level != network.Level)
+                        {
+                            existingNetwork.Level = network.Level;
+                            shouldUpdate = true;
+                        }
+                    }
+
                 }
             }
+            
+            if (shouldUpdate)
+            {
+                SortNetworks();
+                RaisePropertyChanged(() => WifiNetworks);
+            }
+        }
+
+        private void SortNetworks()
+        {
+            WifiNetworks.OrderBy(x => x.Level);
         }
 
         public void ScanWifiNetworksContinuously()
